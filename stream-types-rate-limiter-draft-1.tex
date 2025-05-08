@@ -86,15 +86,13 @@ Here is the mapping of rate limiting algorithms onto these classes of event dist
 \begin{itemize}
   \item The fixed window algorithm creates a segmented distribution, essentially by definition.
   \item The sliding window algorithm creates a uniform distribution, also essentially by definition. Specifically, the formulation of the algorithm enforces a limit of $n$ events over \textit{any} span of $t$ time.
-  \item The token bucket algorithm is a bit trickier, but it can be modeled as a uniform distribution. The trickiness arises due to the way that the token bucket allows bursts up to the depth $d$ of the bucket, but still imposes an \textit{average} rate that matches the rate of token replenishment. Still, we are imposing limits \textit{for any} window of $t$ time, not just fixed segments of time.
+  \item The token bucket algorithm is a bit trickier, but it can be modeled as a uniform distribution. The trickiness arises due to the way that the token bucket allows bursts up to the depth $d$ of the bucket, but still imposes an \textit{average} rate that matches the rate of token replenishment. Still, we are imposing limits \textit{for any} window of $t$ time, not just fixed segments of time. \footnote{There is a temptation here to classify this as a semantically distinct third distribution class, i.e. a \textit{bursty} distribution. However, it is possible to precisely model this distribution as a uniform distribution—the intuition is essentially as described here, but the details will come in \hyperlink{section.3}{Section 3.6}}
   \item The ``leaky bucket as a queue'' algorithm creates a uniform distribution. The rate limit corresponds to the rate of the ``leak,'' which applies \textit{for any} window of time. In fact, given a leak rate $n/t$, the leaky bucket (as a queue) algorithm guarantees that the rate is either \textit{exactly} $n/t$ for any window of size $t$ or simply $0$.
 \end{itemize}
 
-\todo{Perhaps we can add a third ``bursty'' class, although the current approach of just modeling it using the uniform class might be good enough.}
-
 \section{Subtyping Rules}
-\section{Basic Rules}
-\textsc{s-rate} is the rule for subtyping between stream types with rate limit refinements and ``bare'' stream types. \textsc{s-relative-rate} is the rule for subtyping between two stream types with rate limit refinements. Note that these hold for both uniform and segmented rate distributions; for simplicity, we just use the uniform rate notation. We also list out the basic structural subtyping rules for each type constructor.
+\subsection{Basic Rules}
+\textsc{s-rate} is the rule for subtyping between stream types with rate limit refinements and underlying ``bare'' stream types. \textsc{s-relative-rate} is the rule for subtyping between two stream types with rate limit refinements with equal time windows. Note that these hold for both uniform and segmented rate distributions; for simplicity, we just use the uniform rate notation. For completeness, we also list out the basic structural subtyping rules for each type constructor.
 \begin{mathpar}
   \inferrule [s-rate]{ }{\rr{S}{n}{t} \subtype S} \and
   \inferrule [s-relative-rate]{n \leq m}{\rr{S}{n}{t} \subtype \rr{S}{m}{t}} \\
@@ -153,6 +151,9 @@ Next, we lay out the rules when the subtype has a smaller window size. To make t
   \inferrule [s-segment-subwindow-smaller-2]{t_1 \leq t_2 \\ (t_2 - (\floor{t_2/t_1} \cdot t_1)) > g \\ n_1 \leq n_2/(\ceil{t_2/t_1}+1)}{\rr{S}{n_1}{t_1} \subtype \rrseg{S}{n_2}{t_2}}
 \end{mathpar}
 In the segmented rules, $g$ represents the \textit{greatest common time granularity} of $t_1$ and $t_2$. For example, if $t_1$ is 2 second and $t_2$ is 5 seconds, $g$ would be $1$ second; if $t_1$ is 0.3 seconds and $t_2$ is 4 seconds, $g$ would be 0.1 seconds; if $t_1$ is 3 seconds and $t_2$ is 4.55 seconds, $g$ would be 0.01 seconds.
+
+\subsection{Modeling Bursty Distributions}
+We can model \textit{bursty} distributions (of the kind produced by token bucket limiters) precisely as uniform distributions. Specifically, the bursty distribution allows a maximum burst of $d$ events (where $d$ is the depth of the bucket), but otherwise enforces a rate of $n/t$ ($n$ events per $t$ time). \todo{Figure out the details here.}
 
 \subsection{Refinement Casting and Multiple Refinements}
 We can also apply multiple rate limit refinements to a stream type. \todo{There are two approaches to this—the simplest is to treat this as a \textit{cast} and simply take the strongest refinement (as given by the subtyping rules) as the refinement. However, this leaves two problems:
